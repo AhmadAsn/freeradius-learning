@@ -1,0 +1,94 @@
+# =============================================================================
+# sites-available/default — Primary Virtual Server
+# =============================================================================
+
+server default {
+
+    listen {
+        type       = auth
+        ipaddr     = *
+        port       = 1812
+        limit {
+            max_connections = 16
+            lifetime        = 0
+            idle_timeout    = 30
+        }
+    }
+
+    listen {
+        type       = acct
+        ipaddr     = *
+        port       = 1813
+        limit {
+            max_connections = 16
+            lifetime        = 0
+            idle_timeout    = 30
+        }
+    }
+
+    authorize {
+        filter_username
+        filter_password
+        preprocess
+        suffix
+
+        rewrite_calling_station_id
+
+        eap {
+            ok = return
+        }
+
+        # SQL is the primary user store
+        -sql
+
+        # Local file fallback
+        files
+
+        expiration
+        logintime
+        pap
+        chap
+        mschap
+    }
+
+    authenticate {
+        Auth-Type PAP {
+            pap
+        }
+        Auth-Type CHAP {
+            chap
+        }
+        Auth-Type MS-CHAP {
+            mschap
+        }
+        eap
+    }
+
+    preacct {
+        preprocess
+        acct_unique
+        suffix
+    }
+
+    accounting {
+        detail
+        -sql
+        exec
+        attr_filter.accounting_response
+    }
+
+    session {
+        -sql
+    }
+
+    post-auth {
+        -sql
+
+        Post-Auth-Type REJECT {
+            -sql
+            attr_filter.access_reject
+            eap
+            remove_reply_message_if_eap
+        }
+    }
+}

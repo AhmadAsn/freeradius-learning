@@ -1,0 +1,15 @@
+# =============================================================================
+# users — Local Flat-File Users (Fallback)
+# =============================================================================
+# Checked after SQL/LDAP.  Use for emergency break-glass accounts.
+# =============================================================================
+
+# Emergency admin (rotate password regularly)
+breakglass      Cleartext-Password := "CHANGE_ME_emergency_Br34kGl4ss!"
+                Service-Type = NAS-Prompt-User,
+                Cisco-AVPair = "shell:priv-lvl=15"
+
+# FreeRADIUS automatically rejects users with no matching Auth-Type,
+# so no DEFAULT reject entry is needed here. If SQL/LDAP finds a user
+# with Cleartext-Password, the pap module sets Auth-Type = PAP.
+# Unknown users simply get "No Auth-Type found: rejecting the user."

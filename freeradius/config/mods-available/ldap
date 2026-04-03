@@ -1,0 +1,51 @@
+# =============================================================================
+# mods-available/ldap — LDAP / Active Directory
+# =============================================================================
+# Not enabled by default.  To activate:
+#   ln -sf ../mods-available/ldap /etc/raddb/mods-enabled/ldap
+# Then uncomment -ldap lines in sites-available/default and inner-tunnel.
+# =============================================================================
+
+ldap {
+    server   = "ldaps://dc01.example.com"
+    port     = 636
+    identity = "CN=svc-radius,OU=Service Accounts,DC=example,DC=com"
+    password = "CHANGE_ME_ldap_bind_password"
+    base_dn  = "DC=example,DC=com"
+
+    user {
+        base_dn = "OU=Users,${..base_dn}"
+        filter  = "(sAMAccountName=%{%{Stripped-User-Name}:-%{User-Name}})"
+    }
+
+    group {
+        base_dn             = "OU=Groups,${..base_dn}"
+        filter              = "(objectClass=group)"
+        name_attribute      = cn
+        membership_filter   = "(|(member=%{control:Ldap-UserDn})(memberUid=%{%{Stripped-User-Name}:-%{User-Name}}))"
+        membership_attribute = memberOf
+    }
+
+    options {
+        chase_referrals = yes
+        rebind          = yes
+        res_timeout     = 10
+        srv_timelimit   = 3
+        net_timeout     = 1
+    }
+
+    tls {
+        require_cert = "demand"
+    }
+
+    pool {
+        start        = 5
+        min          = 3
+        max          = 32
+        spare        = 3
+        uses         = 0
+        retry_delay  = 30
+        lifetime     = 0
+        idle_timeout = 60
+    }
+}

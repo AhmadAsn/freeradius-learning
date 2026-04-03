@@ -1,0 +1,136 @@
+# =============================================================================
+# FreeRADIUS Production Docker Compose Stack
+# =============================================================================
+# Services:
+#   freeradius  — FreeRADIUS 3.x (auth + acct)
+#   db          — MariaDB 11 (user store + accounting)
+#   daloradius  — Web management UI (optional, --profile management)
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # MariaDB
+  # ---------------------------------------------------------------------------
+  db:
+    image: mariadb:11
+    container_name: radius-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${DB_EXTERNAL_PORT:-3307}:3306"
+    networks:
+      - radius-net
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # FreeRADIUS
+  # ---------------------------------------------------------------------------
+  freeradius:
+    build:
+      context: ./freeradius
+      dockerfile: Dockerfile
+    container_name: freeradius
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      RADIUS_CLIENTS_SECRET: ${RADIUS_CLIENTS_SECRET}
+      RADIUS_DEBUG: ${RADIUS_DEBUG:-false}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./freeradius/config:/etc/raddb-custom:ro
+      - ./freeradius/scripts:/opt/radius-scripts:ro
+      - certs_data:/etc/freeradius/certs
+      - radius_logs:/var/log/freeradius
+    ports:
+      - "${RADIUS_AUTH_PORT:-1812}:1812/udp"
+      - "${RADIUS_ACCT_PORT:-1813}:1813/udp"
+    networks:
+      - radius-net
+    healthcheck:
+      test: ["CMD", "/opt/radius-scripts/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - SETUID
+      - SETGID
+      - CHOWN
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=10M
+      - /run:size=10M
+
+  # ---------------------------------------------------------------------------
+  # daloRADIUS — Web Management UI
+  # Activate with:  docker compose --profile management up -d
+  # ---------------------------------------------------------------------------
+  daloradius:
+    build:
+      context: ./daloradius
+      dockerfile: Dockerfile
+    container_name: daloradius
+    restart: unless-stopped
+    profiles:
+      - management
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      DEFAULT_FREERADIUS_SERVER: freeradius
+      DEFAULT_FREERADIUS_PORT: "1812"
+      DEFAULT_CLIENT_SECRET: ${RADIUS_CLIENTS_SECRET}
+    ports:
+      - "${DALORADIUS_PORT:-8000}:8000"
+      - "${DALORADIUS_USERS_PORT:-80}:80"
+    networks:
+      - radius-net
+
+volumes:
+  db_data:
+  certs_data:
+  radius_logs:
+
+networks:
+  radius-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

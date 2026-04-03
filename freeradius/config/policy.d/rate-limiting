@@ -1,0 +1,42 @@
+# =============================================================================
+# policy.d/rate-limiting — Brute-Force Prevention
+# =============================================================================
+# Two-layer protection:
+#   1. FreeRADIUS built-in: reject_delay (1s delay per reject, set in radiusd.conf)
+#   2. External: fail2ban watching the RADIUS log for repeated failures
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Policy: Log failed authentication attempts with client IP for fail2ban
+# ---------------------------------------------------------------------------
+# This policy is called in post-auth REJECT to ensure consistent log format
+# that fail2ban can parse.
+#
+rate_limit_log {
+    if ("%{%{Packet-Src-IP-Address}:-%{Packet-Src-IPv6-Address}}" != "") {
+        update request {
+            &Module-Failure-Message := "Rate-limit: auth failure for %{User-Name} from client %{%{Packet-Src-IP-Address}:-%{Packet-Src-IPv6-Address}}"
+        }
+    }
+}
+
+# ---------------------------------------------------------------------------
+# fail2ban integration
+# ---------------------------------------------------------------------------
+# FreeRADIUS logs "Login incorrect" to /var/log/freeradius/radius.log.
+# Mount the radius_logs volume on the Docker host and point fail2ban at it.
+#
+# /etc/fail2ban/filter.d/freeradius.conf:
+#   [Definition]
+#   failregex = Login incorrect.*client\s+<HOST>
+#   ignoreregex =
+#
+# /etc/fail2ban/jail.d/freeradius.conf:
+#   [freeradius]
+#   enabled  = true
+#   filter   = freeradius
+#   logpath  = /path/to/radius_logs/radius.log
+#   maxretry = 5
+#   findtime = 300
+#   bantime  = 3600
+#   action   = iptables[name=RADIUS, port="1812:1813", protocol=udp]

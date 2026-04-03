@@ -1,0 +1,23 @@
+# =============================================================================
+# policy.d/canonicalization — Username & MAC Normalization
+# =============================================================================
+
+rewrite_calling_station_id {
+    if (&Calling-Station-Id && (&Calling-Station-Id =~ /([0-9a-fA-F]{2})[^0-9a-fA-F]?([0-9a-fA-F]{2})[^0-9a-fA-F]?([0-9a-fA-F]{2})[^0-9a-fA-F]?([0-9a-fA-F]{2})[^0-9a-fA-F]?([0-9a-fA-F]{2})[^0-9a-fA-F]?([0-9a-fA-F]{2})/)) {
+        update request {
+            &Calling-Station-Id := "%{tolower:%{1}-%{2}-%{3}-%{4}-%{5}-%{6}}"
+        }
+    }
+}
+
+filter_username {
+    if (&User-Name) {
+        update request {
+            &Stripped-User-Name := "%{tolower:%{User-Name}}"
+        }
+    }
+}
+
+filter_password {
+    # Handled by built-in module
+}

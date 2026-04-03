@@ -1,0 +1,47 @@
+# =============================================================================
+# mods-available/sql — SQL Backend (Docker — env vars injected at startup)
+# =============================================================================
+
+sql {
+    driver   = "rlm_sql_mysql"
+    dialect  = "mysql"
+
+    # Placeholders replaced by entrypoint.sh from environment
+    server   = "${DB_HOST}"
+    port     = ${DB_PORT}
+    login    = "${DB_USER}"
+    password = "${DB_PASSWORD}"
+
+    radius_db = "${DB_NAME}"
+
+    acct_table1        = "radacct"
+    acct_table2        = "radacct"
+    postauth_table     = "radpostauth"
+    authcheck_table    = "radcheck"
+    authreply_table    = "radreply"
+    groupcheck_table   = "radgroupcheck"
+    groupreply_table   = "radgroupreply"
+    usergroup_table    = "radusergroup"
+    client_table       = "nas"
+
+    delete_stale_sessions = yes
+
+    $INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
+
+    group_attribute = "SQL-Group"
+
+    pool {
+        start        = 5
+        min          = 3
+        max          = 32
+        spare        = 3
+        uses         = 0
+        retry_delay  = 30
+        lifetime     = 0
+        idle_timeout = 60
+    }
+
+    read_clients = no
+
+    safe_characters = "@abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_: /+"
+}
