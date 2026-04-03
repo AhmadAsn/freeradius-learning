@@ -14,7 +14,7 @@ A fully containerized, production-ready FreeRADIUS 3.x deployment with MariaDB b
 │                                                                       │
 │  ┌──────────────┐    ┌──────────────┐    ┌────────────────────────┐   │
 │  │  FreeRADIUS  │    │   MariaDB    │    │      daloRADIUS        │   │
-│  │              │───▶│              │◀───│      (optional)        │   │
+│  │              │───▶│              │◀──│      (optional)        │   │
 │  │  :1812/udp   │    │  :3306       │    │                        │   │
 │  │  :1813/udp   │    │              │    │  :8000 Operators Admin │   │
 │  └──────────────┘    └──────────────┘    │  :80   Users Portal    │   │
@@ -73,7 +73,7 @@ daloRADIUS is an optional web-based management interface for FreeRADIUS. It prov
 
 > **Important:** Change the default admin password immediately after first login via **Management → Operators → Edit Operator**.
 
-> **Common mistake:** If you see "Cannot Log In", verify you're accessing the correct portal. The **admin login** is on port **8000** (`http://localhost:8000`), NOT port 80. Port 80 is the users self-service portal which authenticates against a different table.
+> **Common mistake:** If you see "Cannot Log In", verify you're accessing the correct portal. The **admin login** is on port **8000** (`http://localhost:8000`), NOT port 80. Port 80 is the users self-service portal, which authenticates against a different table.
 
 ### Starting / Stopping daloRADIUS
 
