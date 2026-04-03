@@ -2,7 +2,7 @@
 
 A fully containerized, production-ready FreeRADIUS 3.x deployment with MariaDB backend, 802.1X EAP support, and operational tooling.
 
-> **Full Documentation:** See the [`docs/`](docs/) folder for complete tutorials covering RADIUS concepts, 802.1X deployment, LDAP/AD integration, certificate management, security hardening, and more.
+> **Full Documentation:** See the [`docs/`](docs/) folder for a complete 12-part tutorial series — from RADIUS basics to production HA. Jump to the [Learning Path](#learning-path) for a guided roadmap.
 
 ---
 
@@ -171,6 +171,84 @@ flowchart TD
     style G fill:#2d6a4f,color:#fff
     style H fill:#2d6a4f,color:#fff
 ```
+
+---
+
+## Learning Path
+
+The [`docs/`](docs/) folder contains a complete **12-part tutorial series** that takes you from zero RADIUS knowledge to production deployment. Follow the guides in order:
+
+```mermaid
+flowchart TD
+    subgraph Fundamentals
+        A["📖 01 - Getting Started<br/><i>Install, first boot, first test</i>"]
+        B["📖 02 - RADIUS Concepts<br/><i>AAA, packets, EAP, processing pipeline</i>"]
+        C["📖 03 - Configuration Reference<br/><i>All config files &amp; env vars</i>"]
+    end
+
+    subgraph Authentication
+        D["📖 04 - Authentication Methods<br/><i>PAP, CHAP, MSCHAP, EAP-PEAP/TTLS/TLS</i>"]
+        E["📖 05 - 802.1X Deployment<br/><i>Switch config, supplicants, MAB, VLAN</i>"]
+    end
+
+    subgraph Management
+        F["📖 06 - Database &amp; User Management<br/><i>Schema, SQL, groups, accounting</i>"]
+        G["📖 07 - daloRADIUS Guide<br/><i>Web UI, operators &amp; users portals</i>"]
+    end
+
+    subgraph Advanced
+        H["📖 08 - LDAP &amp; Active Directory<br/><i>AD integration, group mapping</i>"]
+        I["📖 09 - TLS Certificates<br/><i>PKI, cert rotation, production certs</i>"]
+    end
+
+    subgraph Production
+        J["📖 10 - Security Hardening<br/><i>Firewall, fail2ban, checklist</i>"]
+        K["📖 11 - Troubleshooting<br/><i>Common errors, debug procedures</i>"]
+        L["📖 12 - High Availability<br/><i>Active/passive, Galera, load balancing</i>"]
+    end
+
+    A --> B --> C --> D --> E --> F --> G --> H --> I --> J --> K --> L
+
+    style A fill:#2d6a4f,color:#fff
+    style B fill:#2d6a4f,color:#fff
+    style C fill:#2d6a4f,color:#fff
+    style D fill:#1b4965,color:#fff
+    style E fill:#1b4965,color:#fff
+    style F fill:#6a040f,color:#fff
+    style G fill:#6a040f,color:#fff
+    style H fill:#495057,color:#fff
+    style I fill:#495057,color:#fff
+    style J fill:#264653,color:#fff
+    style K fill:#264653,color:#fff
+    style L fill:#264653,color:#fff
+```
+
+### Guide Index
+
+| # | Guide | What You'll Learn | Prerequisite |
+|---|-------|-------------------|--------------|
+| 01 | [Getting Started](docs/01-getting-started.md) | Install Docker, clone the repo, first `radtest` | None |
+| 02 | [RADIUS Concepts](docs/02-radius-concepts.md) | AAA model, packet types, AVPs, EAP overview, processing pipeline | None |
+| 03 | [Configuration Reference](docs/03-configuration-reference.md) | Every config file, environment variable, and templating mechanism | Guide 01 |
+| 04 | [Authentication Methods](docs/04-authentication-methods.md) | PAP, CHAP, MS-CHAPv2, EAP-PEAP, EAP-TTLS, EAP-TLS — when & how | Guide 02 |
+| 05 | [802.1X Deployment](docs/05-802.1x-deployment.md) | Switch/AP config, supplicant setup, MAB, VLAN assignment | Guides 03–04 |
+| 06 | [Database & User Management](docs/06-database-user-management.md) | Schema, SQL queries, groups, accounting, Makefile shortcuts | Guide 03 |
+| 07 | [daloRADIUS Guide](docs/07-daloradius-guide.md) | Web UI walkthrough, operators vs users portal, reports | Guide 06 |
+| 08 | [LDAP & Active Directory](docs/08-ldap-active-directory.md) | AD bind config, group-to-VLAN mapping, LDAPS | Guides 04, 06 |
+| 09 | [TLS Certificates](docs/09-tls-certificates.md) | Auto-generated PKI, production certs, rotation procedures | Guide 05 |
+| 10 | [Security Hardening](docs/10-security-hardening.md) | Production checklist, firewall rules, fail2ban, secrets management | Guides 01–09 |
+| 11 | [Troubleshooting](docs/11-troubleshooting.md) | Common errors, debug mode, log analysis, packet captures | Any |
+| 12 | [High Availability](docs/12-high-availability.md) | Active/passive, active/active, Galera cluster, keepalived | Guide 10 |
+
+### Recommended paths by role
+
+| Your Role | Start With | Then |
+|-----------|-----------|------|
+| **Complete beginner** | 01 → 02 → 03 | Follow all guides in order |
+| **Network engineer** | 02 → 05 → 09 | Focus on 802.1X and certs |
+| **Sysadmin / DevOps** | 01 → 03 → 06 → 10 | Focus on deployment and hardening |
+| **Windows/AD admin** | 02 → 04 → 08 | Focus on PEAP + Active Directory |
+| **Just exploring** | 01 → 07 | Get running, manage via web UI |
 
 ---
 
