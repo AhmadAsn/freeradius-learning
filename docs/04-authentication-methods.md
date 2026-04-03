@@ -148,19 +148,19 @@ VALUES ('jdoe', 'NT-Password', ':=', '<hash>');
 
 ### How it works (two phases)
 
-```
-Phase 1 (Outer): TLS Handshake
-┌──────────┐                        ┌──────────────┐
-│ Client   │◀── TLS Certificate ───│  FreeRADIUS   │
-│          │─── Verify CA ─────────▶│              │
-│          │◀══ TLS Tunnel ════════▶│              │
-└──────────┘                        └──────────────┘
+```mermaid
+sequenceDiagram
+    participant C as 💻 Client
+    participant FR as 🛡️ FreeRADIUS
 
-Phase 2 (Inner): MSCHAPv2 inside the tunnel
-┌──────────┐                        ┌──────────────┐
-│ Client   │── Username + MSCHAP ──▶│ inner-tunnel  │
-│          │◀── Accept/Reject ──────│   server      │
-└──────────┘                        └──────────────┘
+    Note over C,FR: Phase 1 (Outer): TLS Handshake
+    FR->>C: TLS Certificate
+    C->>FR: Verify CA
+    Note over C,FR: 🔒 TLS Tunnel Established
+
+    Note over C,FR: Phase 2 (Inner): MSCHAPv2 inside tunnel
+    C->>FR: Username + MSCHAP
+    FR-->>C: Accept / Reject
 ```
 
 1. **Phase 1:** Client and server establish a TLS tunnel. Client verifies the server's certificate against a trusted CA.
@@ -290,13 +290,15 @@ eapol_test -c /tmp/ttls-test.conf -a 127.0.0.1 -s testing123
 
 Both client and server present TLS certificates. No passwords involved.
 
-```
-┌──────────┐                        ┌──────────────┐
-│ Client   │── Client Certificate ─▶│  FreeRADIUS   │
-│          │◀── Server Certificate ─│              │
-│          │── Mutual TLS Auth ────▶│              │
-│          │◀── Access-Accept ──────│              │
-└──────────┘                        └──────────────┘
+```mermaid
+sequenceDiagram
+    participant C as 💻 Client
+    participant FR as 🛡️ FreeRADIUS
+
+    C->>FR: Client Certificate
+    FR->>C: Server Certificate
+    C->>FR: Mutual TLS Auth
+    FR-->>C: Access-Accept
 ```
 
 ### When to use
@@ -352,18 +354,23 @@ Deploy `client.p12` to the device and `ca.pem` to FreeRADIUS.
 
 ### Choose based on your environment
 
-```
-Do you have a PKI / MDM?
-├── Yes → EAP-TLS (no passwords, strongest security)
-└── No
-    ├── Mostly Windows clients?
-    │   └── EAP-PEAP + MSCHAPv2 (native support, easy deployment)
-    ├── Mixed OS (Linux, macOS, Android)?
-    │   └── EAP-TTLS + PAP (universal support, flexible)
-    ├── VPN authentication?
-    │   └── MS-CHAPv2 (direct, no EAP wrapper)
-    └── Simple testing / legacy?
-        └── PAP (easiest, least secure)
+```mermaid
+flowchart TD
+    Q1{"Do you have a PKI / MDM?"}
+    Q1 -->|Yes| A1["EAP-TLS<br/><i>No passwords, strongest security</i>"]
+    Q1 -->|No| Q2{"Mostly Windows clients?"}
+    Q2 -->|Yes| A2["EAP-PEAP + MSCHAPv2<br/><i>Native support, easy deployment</i>"]
+    Q2 -->|No| Q3{"Mixed OS?<br/>(Linux, macOS, Android)"}
+    Q3 -->|Yes| A3["EAP-TTLS + PAP<br/><i>Universal support, flexible</i>"]
+    Q3 -->|No| Q4{"VPN authentication?"}
+    Q4 -->|Yes| A4["MS-CHAPv2<br/><i>Direct, no EAP wrapper</i>"]
+    Q4 -->|No| A5["PAP<br/><i>Easiest, least secure</i>"]
+
+    style A1 fill:#2d6a4f,color:#fff
+    style A2 fill:#2d6a4f,color:#fff
+    style A3 fill:#1b4965,color:#fff
+    style A4 fill:#1b4965,color:#fff
+    style A5 fill:#6a040f,color:#fff
 ```
 
 ### Password storage compatibility

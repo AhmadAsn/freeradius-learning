@@ -8,36 +8,23 @@ daloRADIUS is an optional web-based management interface for FreeRADIUS. This gu
 
 daloRADIUS provides **two separate web portals** running in a single container:
 
-```
-┌──────────────────────────────────┐
-│         daloRADIUS Container      │
-│                                  │
-│  ┌────────────────────────────┐  │
-│  │  Apache 2.4                │  │
-│  │                            │  │
-│  │  VirtualHost *:8000        │  │
-│  │  ├── /app/operators/       │  │    ← Admin portal
-│  │  │   └── dologin.php       │  │      (manages everything)
-│  │  │                         │  │
-│  │  VirtualHost *:80          │  │
-│  │  └── /app/users/           │  │    ← User self-service
-│  │      └── dologin.php       │  │      (view usage, change pw)
-│  └────────────────────────────┘  │
-│              │                    │
-│              ▼                    │
-│  ┌────────────────────────────┐  │
-│  │  PHP 7.4 + MariaDB Client  │  │
-│  │  PEAR DB library            │  │
-│  └─────────────┬──────────────┘  │
-│                │                  │
-└────────────────┼──────────────────┘
-                 │
-                 ▼
-          ┌──────────┐
-          │ MariaDB  │
-          │  radius  │
-          │ database │
-          └──────────┘
+```mermaid
+graph TD
+    subgraph Container["daloRADIUS Container"]
+        subgraph Apache["Apache 2.4"]
+            OP["VirtualHost *:8000<br/>/app/operators/<br/><i>Admin portal</i>"]
+            UP["VirtualHost *:80<br/>/app/users/<br/><i>User self-service</i>"]
+        end
+        PHP["PHP 7.4 + MariaDB Client<br/>PEAR DB library"]
+    end
+    OP --> PHP
+    UP --> PHP
+    PHP --> DB[("MariaDB<br/>radius database")]
+
+    style OP fill:#6a040f,color:#fff
+    style UP fill:#1b4965,color:#fff
+    style PHP fill:#495057,color:#fff
+    style DB fill:#1b4965,color:#fff
 ```
 
 | Portal | Port | URL | Auth Table | Purpose |

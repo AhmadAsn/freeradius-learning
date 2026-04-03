@@ -10,19 +10,20 @@ This guide explains the fundamental concepts behind RADIUS — what it is, how i
 
 Instead of configuring usernames and passwords on every switch, access point, and VPN gateway individually, all devices forward authentication requests to a central RADIUS server.
 
-```
-  User/Device           NAS (Switch/AP/VPN)           RADIUS Server
-  ─────────────         ─────────────────             ─────────────
-       │                       │                            │
-       │── Credentials ──────▶│                            │
-       │                       │── Access-Request ────────▶│
-       │                       │                            │── Check DB/LDAP
-       │                       │                            │
-       │                       │◀── Access-Accept ─────────│  (+ VLAN, policies)
-       │◀── Network Access ───│                            │
-       │                       │── Accounting-Start ──────▶│
-       │      ...session...    │                            │
-       │                       │── Accounting-Stop ───────▶│
+```mermaid
+sequenceDiagram
+    participant U as 👤 User/Device
+    participant N as 🖧 NAS (Switch/AP/VPN)
+    participant R as 🛡️ RADIUS Server
+
+    U->>N: Credentials
+    N->>R: Access-Request
+    R->>R: Check DB / LDAP
+    R-->>N: Access-Accept (+ VLAN, policies)
+    N-->>U: Network Access Granted
+    N->>R: Accounting-Start
+    Note over U,N: ... session ...
+    N->>R: Accounting-Stop
 ```
 
 ---
@@ -117,30 +118,18 @@ Juniper-Switching-Filter = "..."
 
 When FreeRADIUS receives an Access-Request, it processes it through a series of **sections** in the virtual server configuration. Think of it like middleware in a web framework:
 
-```
-Access-Request arrives
-        │
-        ▼
- ┌──────────────┐
- │   authorize   │  ← "Who is this user? Look up their credentials."
- │              │     Modules: sql, ldap, files, eap
- └──────┬───────┘
-        │
-        ▼
- ┌──────────────┐
- │ authenticate  │  ← "Verify the password."
- │              │     Modules: pap, chap, mschap, eap
- └──────┬───────┘
-        │
-        ├── Accept ──▶ ┌──────────────┐
-        │              │  post-auth    │  ← "Log it, add VLAN attributes."
-        │              │              │     Modules: sql, exec
-        │              └──────────────┘
-        │
-        └── Reject ──▶ ┌──────────────┐
-                       │ Post-Auth-   │  ← "Log the failure."
-                       │ Type REJECT  │
-                       └──────────────┘
+```mermaid
+flowchart TD
+    A["📥 Access-Request arrives"] --> B["authorize<br/><i>Who is this user?</i><br/>Modules: sql, ldap, files, eap"]
+    B --> C["authenticate<br/><i>Verify the password</i><br/>Modules: pap, chap, mschap, eap"]
+    C -->|Accept| D["post-auth<br/><i>Log it, add VLAN attributes</i><br/>Modules: sql, exec"]
+    C -->|Reject| E["Post-Auth-Type REJECT<br/><i>Log the failure</i>"]
+
+    style A fill:#495057,color:#fff
+    style B fill:#1b4965,color:#fff
+    style C fill:#2d6a4f,color:#fff
+    style D fill:#2d6a4f,color:#fff
+    style E fill:#6a040f,color:#fff
 ```
 
 ### Section Details
@@ -191,18 +180,18 @@ EAP is a framework for advanced authentication, most commonly used for **802.1X*
 
 EAP is complex because it adds a **tunnel** layer:
 
-```
-Supplicant ◀──── EAP (over 802.1X) ────▶ NAS ◀──── RADIUS ────▶ FreeRADIUS
-                                                                      │
-                                                               ┌──────┴──────┐
-                                                               │ Outer auth: │
-                                                               │ EAP-PEAP    │
-                                                               │ (TLS tunnel)│
-                                                               ├─────────────┤
-                                                               │ Inner auth: │
-                                                               │ MSCHAPv2    │
-                                                               │ (password)  │
-                                                               └─────────────┘
+```mermaid
+flowchart LR
+    S["💻 Supplicant"] <-->|"EAP (over 802.1X)"| N["🖧 NAS"]
+    N <-->|"RADIUS"| FR["🛡️ FreeRADIUS"]
+    FR --- O["Outer auth:<br/>EAP-PEAP<br/>(TLS tunnel)"]
+    FR --- I["Inner auth:<br/>MSCHAPv2<br/>(password)"]
+
+    style S fill:#495057,color:#fff
+    style N fill:#495057,color:#fff
+    style FR fill:#2d6a4f,color:#fff
+    style O fill:#1b4965,color:#fff
+    style I fill:#6a040f,color:#fff
 ```
 
 The **outer** method (PEAP, TTLS, TLS) establishes an encrypted TLS tunnel. The **inner** method (MSCHAPv2, PAP) sends the actual credentials inside that tunnel.
@@ -243,25 +232,19 @@ Accounting data is used for:
 
 ## How This Stack Implements RADIUS
 
-```
-                    ┌─────────────────────────┐
-                    │     docker-compose.yml   │
-                    └────────┬────────────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-      ┌───────▼──────┐ ┌────▼────┐ ┌───────▼──────┐
-      │  FreeRADIUS  │ │ MariaDB │ │  daloRADIUS  │
-      │              │ │         │ │  (optional)  │
-      │ radiusd.conf │ │ radius  │ │              │
-      │ clients.conf │ │   DB    │ │ :8000 admin  │
-      │ sites-avail/ │ │         │ │ :80   users  │
-      │ mods-avail/  │ │ Tables: │ │              │
-      │ policy.d/    │ │ radcheck│ └──────────────┘
-      │              │ │ radreply│
-      │ Auth:1812/udp│ │ radacct │
-      │ Acct:1813/udp│ │ ...     │
-      └──────────────┘ └─────────┘
+```mermaid
+graph TD
+    DC["📄 docker-compose.yml"] --> FR["🛡️ FreeRADIUS<br/>radiusd.conf · clients.conf<br/>sites-avail/ · mods-avail/<br/>policy.d/<br/>Auth :1812/udp · Acct :1813/udp"]
+    DC --> DB["🗄️ MariaDB<br/>radius DB<br/>radcheck · radreply<br/>radacct · ..."]
+    DC --> DAL["🌐 daloRADIUS (optional)<br/>:8000 admin · :80 users"]
+
+    FR -->|SQL| DB
+    DAL -->|SQL| DB
+
+    style DC fill:#495057,color:#fff
+    style FR fill:#2d6a4f,color:#fff
+    style DB fill:#1b4965,color:#fff
+    style DAL fill:#6a040f,color:#fff
 ```
 
 | Component | RADIUS Role |

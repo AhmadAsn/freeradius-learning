@@ -8,22 +8,30 @@ A fully containerized, production-ready FreeRADIUS 3.x deployment with MariaDB b
 
 ## Architecture
 
-```
-┌───────────────────────────────────────────────────────────────────────┐
-│                            Docker Host                                │
-│                                                                       │
-│  ┌──────────────┐    ┌──────────────┐    ┌────────────────────────┐   │
-│  │  FreeRADIUS  │    │   MariaDB    │    │      daloRADIUS        │   │
-│  │              │───▶│              │◀──│      (optional)        │   │
-│  │  :1812/udp   │    │  :3306       │    │                        │   │
-│  │  :1813/udp   │    │              │    │  :8000 Operators Admin │   │
-│  └──────────────┘    └──────────────┘    │  :80   Users Portal    │   │
-│         ▲                   │            └────────────────────────┘   │
-│         │              mariadb_data                                   │
-│    NAS devices          (volume)                                      │
-│  (switches, APs,                                                      │
-│   VPN gateways)                                                       │
-└───────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph LR
+    NAS["🖧 NAS Devices<br/>(Switches, APs, VPNs)"]
+    FR["🛡️ FreeRADIUS<br/>:1812/udp auth<br/>:1813/udp acct"]
+    DB["🗄️ MariaDB<br/>:3306"]
+    DAL["🌐 daloRADIUS<br/>:8000 Operators<br/>:80 Users"]
+    VOL[("mariadb_data<br/>(volume)")]
+
+    NAS -- "RADIUS" --> FR
+    FR -- "SQL" --> DB
+    DAL -- "SQL" --> DB
+    DB --- VOL
+
+    subgraph Docker Host
+        FR
+        DB
+        DAL
+        VOL
+    end
+
+    style FR fill:#2d6a4f,color:#fff
+    style DB fill:#1b4965,color:#fff
+    style DAL fill:#6a040f,color:#fff
+    style NAS fill:#495057,color:#fff
 ```
 
 **Services:**
@@ -38,20 +46,130 @@ A fully containerized, production-ready FreeRADIUS 3.x deployment with MariaDB b
 
 ## Quick Start
 
+### Prerequisites
+
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| Docker Engine | 20.10+ | 24.x+ |
+| Docker Compose | v2.0+ | v2.20+ |
+| RAM | 1 GB free | 2 GB+ |
+| Disk | 500 MB | 2 GB+ |
+| OS | Linux / Windows / macOS | Linux (production) |
+
 ```bash
-# 1. Clone and configure
-git clone <repo-url> && cd freeradius-docker
+# Verify prerequisites
+docker --version          # Docker Engine 20.10+
+docker compose version    # Compose v2+
+```
+
+### Step-by-step setup
+
+```mermaid
+flowchart LR
+    A["1️⃣ Clone"] --> B["2️⃣ Configure .env"]
+    B --> C["3️⃣ Build & Start"]
+    C --> D["4️⃣ Verify"]
+    D --> E["5️⃣ Add Users"]
+
+    style A fill:#495057,color:#fff
+    style B fill:#1b4965,color:#fff
+    style C fill:#2d6a4f,color:#fff
+    style D fill:#2d6a4f,color:#fff
+    style E fill:#6a040f,color:#fff
+```
+
+#### 1. Clone the repository
+
+```bash
+git clone https://github.com/AhmadAsn/freeradius-learning.git
+cd freeradius-learning
+```
+
+#### 2. Configure environment
+
+```bash
 cp .env.example .env
-# Edit .env — change ALL passwords and secrets!
+```
 
-# 2. Build and start
-make build
-make up
+Edit `.env` and **change all passwords and secrets** — never use the defaults in production:
 
-# 3. Verify
-make status        # Check container health
-make test          # Test PAP authentication
-make test-all      # Run full test suite
+```bash
+# Generate strong random passwords
+openssl rand -base64 24    # Use output for DB_ROOT_PASSWORD
+openssl rand -base64 24    # Use output for DB_PASSWORD
+openssl rand -base64 24    # Use output for RADIUS_CLIENTS_SECRET
+```
+
+> **Tip:** If your password contains `$`, escape it: `DB_PASSWORD=my\$ecret`
+
+#### 3. Build and start
+
+```bash
+make build    # Build the FreeRADIUS Docker image
+make up       # Start FreeRADIUS + MariaDB
+```
+
+Wait ~30 seconds for first boot (database initialization + TLS certificate generation).
+
+#### 4. Verify everything works
+
+```bash
+make status       # All containers should show "healthy"
+make test         # Should output: "Access-Accept" ✅
+```
+
+Expected `make test` output:
+
+```
+Sending Access-Request of id 42 to 127.0.0.1 port 1812
+  User-Name = "testuser"
+  User-Password = "TestPass123!"
+Received Access-Accept Id 42 from 127.0.0.1:1812 to ...
+```
+
+Run the full suite:
+
+```bash
+make test-all     # Tests PAP, admin, guest, reject, and status-server
+```
+
+#### 5. Add your first user
+
+```bash
+# Add a user to the "employees" group (VLAN 100)
+make add-user USER=jdoe PASS='MyP@ssw0rd!' GROUP=employees
+
+# Verify authentication
+docker exec freeradius radtest jdoe 'MyP@ssw0rd!' 127.0.0.1 0 testing123
+```
+
+#### 6. (Optional) Start the web UI
+
+```bash
+make mgmt-up     # Start daloRADIUS management interface
+```
+
+Open `http://localhost:8000` — login: `administrator` / `radius`
+
+> See [daloRADIUS Guide](docs/07-daloradius-guide.md) for portal details.
+
+### What happens on first boot?
+
+```mermaid
+flowchart TD
+    A["Container starts"] --> B["Wait for MariaDB to be ready"]
+    B --> C["Inject DB credentials into config<br/>(envsubst templating)"]
+    C --> D{"TLS certs exist?"}
+    D -->|No| E["Generate self-signed CA + server cert"]
+    D -->|Yes| F["Use existing certs"]
+    E --> G["Start radiusd"]
+    F --> G
+    G --> H["Healthcheck: Status-Server probe"]
+
+    style A fill:#495057,color:#fff
+    style E fill:#1b4965,color:#fff
+    style G fill:#2d6a4f,color:#fff
+    style H fill:#2d6a4f,color:#fff
 ```
 
 ---

@@ -6,30 +6,42 @@ Complete reference for every configuration file, environment variable, and templ
 
 ## File Map
 
-```
-freeradius/
-├── Dockerfile                    # Image build instructions
-├── scripts/
-│   ├── entrypoint.sh            # Startup orchestration (8 steps)
-│   ├── healthcheck.sh           # Status-Server health probe
-│   └── generate-certs.sh        # Self-signed TLS PKI generator
-└── config/
-    ├── radiusd.conf              # Main daemon configuration
-    ├── clients.conf              # NAS device definitions
-    ├── proxy.conf                # Realm proxying (disabled)
-    ├── users                     # Local flat-file user store
-    ├── certs/                    # TLS certificates (auto-generated or mounted)
-    ├── sites-available/
-    │   ├── default               # Primary virtual server
-    │   └── inner-tunnel          # EAP Phase 2 virtual server
-    ├── mods-available/
-    │   ├── eap                   # EAP configuration (PEAP/TTLS/TLS)
-    │   ├── sql                   # MariaDB backend
-    │   ├── ldap                  # LDAP/AD backend (disabled)
-    │   └── mschap               # MS-CHAPv2 settings
-    └── policy.d/
-        ├── canonicalization      # Username/MAC normalization
-        └── rate-limiting         # Brute-force prevention
+```mermaid
+graph LR
+    FR["freeradius/"] --> DF["Dockerfile"]
+    FR --> SC["scripts/"]
+    FR --> CF["config/"]
+
+    SC --> EP["entrypoint.sh<br/><i>Startup orchestration</i>"]
+    SC --> HC["healthcheck.sh<br/><i>Status-Server probe</i>"]
+    SC --> GC["generate-certs.sh<br/><i>TLS PKI generator</i>"]
+
+    CF --> RC["radiusd.conf<br/><i>Main daemon config</i>"]
+    CF --> CC["clients.conf<br/><i>NAS device definitions</i>"]
+    CF --> PC["proxy.conf<br/><i>Realm proxying</i>"]
+    CF --> UF["users<br/><i>Flat-file user store</i>"]
+    CF --> CERTS["certs/<br/><i>TLS certificates</i>"]
+    CF --> SA["sites-available/"]
+    CF --> MA["mods-available/"]
+    CF --> PD["policy.d/"]
+
+    SA --> DEF["default<br/><i>Primary virtual server</i>"]
+    SA --> IT["inner-tunnel<br/><i>EAP Phase 2</i>"]
+
+    MA --> EAP["eap<br/><i>PEAP/TTLS/TLS</i>"]
+    MA --> SQL["sql<br/><i>MariaDB backend</i>"]
+    MA --> LDAP["ldap<br/><i>AD backend</i>"]
+    MA --> MSC["mschap<br/><i>MS-CHAPv2</i>"]
+
+    PD --> CAN["canonicalization<br/><i>Username/MAC normalization</i>"]
+    PD --> RL["rate-limiting<br/><i>Brute-force prevention</i>"]
+
+    style FR fill:#2d6a4f,color:#fff
+    style SC fill:#1b4965,color:#fff
+    style CF fill:#1b4965,color:#fff
+    style SA fill:#495057,color:#fff
+    style MA fill:#495057,color:#fff
+    style PD fill:#495057,color:#fff
 ```
 
 ---

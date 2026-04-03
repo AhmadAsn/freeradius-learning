@@ -12,18 +12,15 @@ EAP methods (PEAP, TTLS, TLS) establish a TLS tunnel between the supplicant and 
 2. **CA certificate** — the trust anchor; clients verify the server cert is signed by this CA
 3. **DH parameters** — for Diffie-Hellman key exchange (forward secrecy)
 
-```
-Client (Supplicant)                       FreeRADIUS
-─────────────────                         ──────────
-     │                                        │
-     │◀──── server.pem (server certificate) ──│
-     │                                        │
-     │── Verify against trusted CA ──────────▶│
-     │   (ca.pem must be trusted)             │
-     │                                        │
-     │◀════ TLS Tunnel Established ══════════▶│
-     │                                        │
-     │── Username + Password (encrypted) ────▶│
+```mermaid
+sequenceDiagram
+    participant C as 💻 Client (Supplicant)
+    participant FR as 🛡️ FreeRADIUS
+
+    FR->>C: server.pem (server certificate)
+    C->>C: Verify against trusted CA (ca.pem)
+    Note over C,FR: 🔒 TLS Tunnel Established
+    C->>FR: Username + Password (encrypted)
 ```
 
 ---

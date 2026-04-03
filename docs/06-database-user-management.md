@@ -8,23 +8,65 @@ Complete guide to the RADIUS database schema, managing users and groups, VLAN as
 
 The stack uses MariaDB with the standard FreeRADIUS schema (8 core tables):
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                      radius database                      │
-│                                                          │
-│  ┌───────────┐    ┌────────────┐    ┌──────────────┐     │
-│  │ radcheck  │    │radusergroup│    │ radgroupcheck│     │
-│  │ (user pw) │───▶│(user→group)│◀───│ (group check)│     │
-│  └───────────┘    └────────────┘    └──────────────┘     │
-│  ┌───────────┐                      ┌──────────────┐     │
-│  │ radreply  │                      │ radgroupreply│     │
-│  │(user attr)│                      │ (group attr) │     │
-│  └───────────┘                      └──────────────┘     │
-│  ┌───────────┐    ┌────────────┐    ┌──────────────┐     │
-│  │  radacct  │    │radpostauth │    │     nas      │     │
-│  │(sessions) │    │ (auth log) │    │  (clients)   │     │
-│  └───────────┘    └────────────┘    └──────────────┘     │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+erDiagram
+    radcheck {
+        int id PK
+        string username
+        string attribute
+        string op
+        string value
+    }
+    radreply {
+        int id PK
+        string username
+        string attribute
+        string op
+        string value
+    }
+    radusergroup {
+        int id PK
+        string username
+        string groupname
+        int priority
+    }
+    radgroupcheck {
+        int id PK
+        string groupname
+        string attribute
+        string op
+        string value
+    }
+    radgroupreply {
+        int id PK
+        string groupname
+        string attribute
+        string op
+        string value
+    }
+    radacct {
+        int radacctid PK
+        string username
+        string acctsessionid
+        string nasipaddress
+    }
+    radpostauth {
+        int id PK
+        string username
+        string reply
+        datetime authdate
+    }
+    nas {
+        int id PK
+        string nasname
+        string secret
+        string shortname
+    }
+
+    radcheck ||--o{ radusergroup : "username"
+    radreply ||--o{ radusergroup : "username"
+    radusergroup }o--|| radgroupcheck : "groupname"
+    radusergroup }o--|| radgroupreply : "groupname"
 ```
 
 ### Table Reference

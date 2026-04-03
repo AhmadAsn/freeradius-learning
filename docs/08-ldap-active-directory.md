@@ -8,21 +8,19 @@ This guide covers connecting FreeRADIUS to LDAP or Microsoft Active Directory fo
 
 Instead of managing users in the MariaDB `radcheck` table, you can authenticate against Active Directory (AD) or any LDAP directory:
 
-```
-User ──▶ NAS ──▶ FreeRADIUS ──▶ Active Directory
-                      │                  │
-                      │         ┌────────┴────────┐
-                      │         │ Bind as svc acct │
-                      │         │ Search for user  │
-                      │         │ Check group membership │
-                      │         └────────┬────────┘
-                      │                  │
-                      │◀── User found ───┘
-                      │
-                      ▼
-                   MariaDB
-                 (group→VLAN mapping
-                  + accounting only)
+```mermaid
+flowchart LR
+    U["👤 User"] --> N["🖧 NAS"]
+    N --> FR["🛡️ FreeRADIUS"]
+    FR -->|"Bind & Search"| AD["🏢 Active Directory"]
+    AD -->|"User found + groups"| FR
+    FR -->|"Group→VLAN mapping<br/>+ Accounting"| DB["🗄️ MariaDB"]
+
+    style U fill:#495057,color:#fff
+    style N fill:#495057,color:#fff
+    style FR fill:#2d6a4f,color:#fff
+    style AD fill:#1b4965,color:#fff
+    style DB fill:#6a040f,color:#fff
 ```
 
 **What stays in SQL:** Group-to-VLAN mappings (`radgroupreply`), accounting (`radacct`), and post-auth logs  
